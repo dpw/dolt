@@ -101,18 +101,18 @@ $(function() {
         }
     }
 
-    var HISTORY = [];
+    var history = [];
     var current;
 
     function appendEntry(item) {
         var entry = new Entry(item);
-        var num = HISTORY.length;
+        var num = history.length;
         entry.input.click(function() {
-            if (current !== undefined) HISTORY[current].blur();
+            if (current !== undefined) history[current].blur();
             current = num;
-            HISTORY[num].focus();
+            history[num].focus();
         });
-        HISTORY.push(entry);
+        history.push(entry);
         repl.append(entry.node);
         return entry;
     }
@@ -120,40 +120,40 @@ $(function() {
     function prompt() {
         var next = appendEntry();
         next.focus();
-        current = HISTORY.length - 1;
+        current = history.length - 1;
         return false;
     }
 
-    var CONN;
-    var SESSIONID;
-    var KS = [];
+    var conn;
+    var sessionid;
+    var ks = [];
 
     function fireK(m) {
-        var k = KS.pop();
+        var k = ks.pop();
         k(JSON.parse(m.data));
     }
 
     function openSession(id) {
-        if (CONN) {
-            CONN.close();
+        if (conn) {
+            conn.close();
             $(repl).empty();
         }
-        CONN = new SockJS(eval_uri);
-        CONN.onmessage = function(m) {
-            SESSIONID = id;
+        conn = new SockJS(eval_uri);
+        conn.onmessage = function(m) {
+            sessionid = id;
             loadHistory(JSON.parse(m.data));
-            CONN.onmessage = fireK;
+            conn.onmessage = fireK;
             return prompt();
         };
-        CONN.onopen = function() { CONN.send(id); };
+        conn.onopen = function() { conn.send(id); };
         $('#sessions a').removeClass('current');
         $('#sessions').find('a[href="#' + id + '"]').addClass('current');
     }
 
     function sendToBeEvaluated(exp, k) {
-        KS.push(k);
-        CONN.send(JSON.stringify(exp));
-        if (current === HISTORY.length - 1) {
+        ks.push(k);
+        conn.send(JSON.stringify(exp));
+        if (current === history.length - 1) {
             prompt();
         }
     }
@@ -167,7 +167,7 @@ $(function() {
     function maybeStartSession() {
         if (window.location.hash) {
             var sessionId = window.location.hash.substr(1);
-            if (sessionId != SESSIONID) {
+            if (sessionId != sessionid) {
                 openSession(sessionId);
             }
         }
