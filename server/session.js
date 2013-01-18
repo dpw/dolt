@@ -24,27 +24,23 @@ var builtins = {
 function Session(id) {
     this.id = id;
     this.file = '/tmp/session-' + id + '.json';
-    this.toplevel = new interp.Environment(interp.builtins);
-    for (var p in builtins) { this.toplevel.bind(p, builtins[p]); }
+    this.env = new interp.Environment(interp.builtins);
+    for (var p in builtins) { this.env.bind(p, builtins[p]); }
 
     var self = this;
     this.state = fs.readFile(this.file).then(function (data) {
         return JSON.parse(data);
     }, function (err) {
         if (err.code === 'ENOENT')
-            return {history: [], global: {}};
+            return {history: []};
         else
             throw err;
     }).then(function (state) {
         var history = state.history;
         for (var i = 0; i < history.length; i++)
             if (history[i].result)
-                self.toplevel.bind(history[i].variable,
-                                   interp.IValue.decodeJSON(history[i].result));
-        // This relies on the environment mutating the frame given it,
-        // so that we can have it in the state *and* as the global
-        // object.
-        self.env = new GlobalEnvironment(self.toplevel, state.global);
+                self.env.bind(history[i].variable,
+                              interp.IValue.decodeJSON(history[i].result));
         return state;
     });
 }
@@ -160,8 +156,3 @@ Session.prototype.eval = function (expr, variable) {
 };
 
 module.exports = Session;
-
-function GlobalEnvironment(toplevel, global) {
-    GlobalEnvironment.super_.call(this, toplevel, global);
-}
-util.inherits(GlobalEnvironment, interp.Environment);
